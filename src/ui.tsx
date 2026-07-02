@@ -2,11 +2,26 @@ import type { AvailabilitySlot, AvailabilitySnapshot } from './types';
 
 type PageProps = {
   snapshot: AvailabilitySnapshot | null;
+  filters?: AvailabilityFilters;
 };
 
-const Page = ({ snapshot }: PageProps) => {
+type AvailabilityFilters = {
+  date?: string;
+  field?: string;
+};
+
+const Page = ({ snapshot, filters = {} }: PageProps) => {
   const availableSlots = snapshot?.slots.filter((slot) => slot.available) ?? [];
-  const grouped = groupByDate(availableSlots);
+  const dateOptions = getDateOptions(availableSlots);
+  const fieldOptions = getFieldOptions(availableSlots);
+  const filteredSlots = availableSlots.filter((slot) => {
+    const fieldKey = getFieldKey(slot);
+    return (
+      (!filters.date || slot.date === filters.date) &&
+      (!filters.field || fieldKey === filters.field)
+    );
+  });
+  const grouped = groupByDate(filteredSlots);
   const parksWithAvailability = new Set(
     availableSlots.map((slot) => `${slot.category}:${slot.parkCode}`),
   ).size;
@@ -82,9 +97,65 @@ const Page = ({ snapshot }: PageProps) => {
                   </p>
                 </div>
 
+                <form
+                  action="/"
+                  method="get"
+                  class="grid gap-3 border border-zinc-200 bg-white p-3 md:grid-cols-[minmax(180px,240px)_minmax(240px,1fr)_auto]"
+                >
+                  <label class="grid gap-1 text-sm">
+                    <span class="font-medium text-zinc-700">日付</span>
+                    <select
+                      class="h-10 border border-zinc-300 bg-white px-3 text-zinc-950"
+                      name="date"
+                    >
+                      <option value="">すべて</option>
+                      {dateOptions.map((date) => (
+                        <option value={date} selected={filters.date === date}>
+                          {formatDisplayDate(date)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label class="grid gap-1 text-sm">
+                    <span class="font-medium text-zinc-700">野球場</span>
+                    <select
+                      class="h-10 border border-zinc-300 bg-white px-3 text-zinc-950"
+                      name="field"
+                    >
+                      <option value="">すべて</option>
+                      {fieldOptions.map((field) => (
+                        <option
+                          value={field.value}
+                          selected={filters.field === field.value}
+                        >
+                          {field.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div class="flex items-end gap-2">
+                    <button
+                      class="h-10 border border-zinc-900 bg-zinc-900 px-4 font-medium text-sm text-white"
+                      type="submit"
+                    >
+                      絞り込み
+                    </button>
+                    <a
+                      class="flex h-10 items-center border border-zinc-300 px-4 font-medium text-sm text-zinc-800"
+                      href="/"
+                    >
+                      解除
+                    </a>
+                  </div>
+                </form>
+
                 {availableSlots.length === 0 ? (
                   <div class="border border-zinc-200 bg-white px-4 py-6 text-center text-zinc-600">
                     現在表示できる空き枠はありません。
+                  </div>
+                ) : filteredSlots.length === 0 ? (
+                  <div class="border border-zinc-200 bg-white px-4 py-6 text-center text-zinc-600">
+                    条件に一致する空き枠はありません。
                   </div>
                 ) : (
                   <div class="overflow-x-auto border border-zinc-200 bg-white">
@@ -101,16 +172,11 @@ const Page = ({ snapshot }: PageProps) => {
                       </thead>
                       <tbody>
                         {Array.from(grouped.entries()).map(([date, slots]) =>
-                          slots.map((slot, index) => (
-                            <tr class="border-zinc-100 border-t">
-                              {index === 0 ? (
-                                <td
-                                  class="whitespace-nowrap px-3 py-2 font-medium"
-                                  rowSpan={slots.length}
-                                >
-                                  {date}
-                                </td>
-                              ) : null}
+                          slots.map((slot) => (
+                            <tr class="border-zinc-200 border-t">
+                              <td class="whitespace-nowrap px-3 py-2 font-medium text-zinc-700">
+                                {formatDisplayDate(date)}
+                              </td>
                               <Td>{slot.category}</Td>
                               <Td>{slot.parkName}</Td>
                               <Td>{slot.facilityName}</Td>
@@ -159,6 +225,36 @@ const groupByDate = (slots: AvailabilitySlot[]) => {
   return map;
 };
 
+const getDateOptions = (slots: AvailabilitySlot[]) =>
+  Array.from(new Set(slots.map((slot) => slot.date))).sort();
+
+const getFieldOptions = (slots: AvailabilitySlot[]) => {
+  const map = new Map<string, string>();
+  for (const slot of slots) {
+    map.set(
+      getFieldKey(slot),
+      `${slot.parkName} ${slot.facilityName}（${slot.category}）`,
+    );
+  }
+  return Array.from(map.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'ja'));
+};
+
+const getFieldKey = (slot: AvailabilitySlot) =>
+  `${slot.category}:${slot.parkCode}:${slot.facilityCode}`;
+
+const formatDisplayDate = (isoDate: string) => {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  if (!year || !month || !day) {
+    return isoDate;
+  }
+  const weekday = ['日', '月', '火', '水', '木', '金', '土'][
+    new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  ];
+  return `${year}/${month}/${day}（${weekday}）`;
+};
+
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat('ja-JP', {
     dateStyle: 'medium',
@@ -166,4 +262,4 @@ const formatDateTime = (value: string) =>
     timeZone: 'Asia/Tokyo',
   }).format(new Date(value));
 
-export { Page };
+export { formatDisplayDate, Page };

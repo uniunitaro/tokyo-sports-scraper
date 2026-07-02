@@ -18,6 +18,12 @@ const app = await alchemy('tokyo-sports-scraper', {
 });
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
+const secret = (value: string | undefined) => {
+  if (!value) {
+    return '';
+  }
+  return shouldUseStateStore ? alchemy.secret(value) : value;
+};
 
 const availabilityKv = await KVNamespace('availability', {
   title: 'tokyo-sports-scraper-availability',
@@ -37,9 +43,7 @@ export const worker = await Worker('worker', {
   bindings: {
     AVAILABILITY_KV: availabilityKv,
     ASSETS: staticAssets,
-    ADMIN_TOKEN: process.env.ADMIN_TOKEN
-      ? alchemy.secret(process.env.ADMIN_TOKEN)
-      : '',
+    ADMIN_TOKEN: secret(process.env.ADMIN_TOKEN),
   },
   url: true,
 });

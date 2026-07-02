@@ -9,7 +9,15 @@ app.get('/styles.css', (c) => c.env.ASSETS.fetch(c.req.raw));
 
 app.get('/', async (c) => {
   const snapshot = await loadLatestSnapshot(c.env.AVAILABILITY_KV);
-  return c.html(<Page snapshot={snapshot} />);
+  return c.html(
+    <Page
+      snapshot={snapshot}
+      filters={{
+        date: c.req.query('date'),
+        field: c.req.query('field'),
+      }}
+    />,
+  );
 });
 
 app.get('/api/availability', async (c) => {
