@@ -1,0 +1,8 @@
+node_modules
+.alchemy
+.playwright-cli
+.wrangler
+.dev.vars
+worker-configuration.d.ts
+cloudflare-env.d.ts
+dist
