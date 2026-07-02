@@ -70,6 +70,11 @@ type Env = {
   AVAILABILITY_KV: KVNamespace;
   ASSETS: Fetcher;
   ADMIN_TOKEN?: string;
+  SCRAPE_WORKFLOW_DISPATCH_TOKEN?: string;
+  SCRAPE_WORKFLOW_OWNER?: string;
+  SCRAPE_WORKFLOW_REPO?: string;
+  SCRAPE_WORKFLOW_ID?: string;
+  SCRAPE_WORKFLOW_REF?: string;
 };
 
 export type {

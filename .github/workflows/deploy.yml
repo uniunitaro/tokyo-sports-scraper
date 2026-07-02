@@ -42,3 +42,4 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_EMAIL: ${{ secrets.CLOUDFLARE_EMAIL }}
           ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+          SCRAPE_WORKFLOW_DISPATCH_TOKEN: ${{ secrets.SCRAPE_WORKFLOW_DISPATCH_TOKEN }}

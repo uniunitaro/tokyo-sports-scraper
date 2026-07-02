@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { dispatchScrapeWorkflow, logDispatchError } from './github-actions';
 import { loadLatestSnapshot, saveLatestSnapshot } from './storage';
 import type { AvailabilitySnapshot, Env } from './types';
 import { Page } from './ui';
@@ -51,6 +52,27 @@ app.post('/admin/availability', async (c) => {
   });
 });
 
+app.post('/admin/dispatch-scrape', async (c) => {
+  const auth = authorize(c.req, c.env);
+  if (!auth.ok) {
+    return c.json({ ok: false, message: auth.message }, auth.status);
+  }
+
+  try {
+    return c.json(await dispatchScrapeWorkflow(c.env), 202);
+  } catch (error) {
+    logDispatchError('manual scrape dispatch failed', error);
+    return c.json(
+      {
+        ok: false,
+        message:
+          error instanceof Error ? error.message : 'failed to dispatch scrape',
+      },
+      502,
+    );
+  }
+});
+
 const authorize = (
   req: {
     query: (name: string) => string | undefined;
@@ -101,6 +123,13 @@ const isAvailabilitySnapshot = (
 export default {
   fetch(request, env, executionCtx) {
     return app.fetch(request, env, executionCtx);
+  },
+  scheduled(_event, env, executionCtx) {
+    executionCtx.waitUntil(
+      dispatchScrapeWorkflow(env).catch((error) => {
+        logDispatchError('scheduled scrape dispatch failed', error);
+      }),
+    );
   },
 } satisfies ExportedHandler<Env>;
 
